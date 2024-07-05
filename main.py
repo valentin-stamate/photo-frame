@@ -24,7 +24,7 @@ def add_corners(im, rad):
 
 def visit(image_path: str):
     name, extension = os.path.splitext(os.path.basename(image_path))
-    export_path = os.path.join('export', f'{name}.png')
+    export_path = os.path.join('export', f'{name}.jpg')
 
     with Image.open(image_path) as image:
 
@@ -52,7 +52,10 @@ def visit(image_path: str):
         position = (- (image.width - final_image.width) // 2, - (image.height - final_image.height) // 2)
 
         final_image.paste(image, position, mask=image)
-        final_image.save(export_path, format='PNG', quality=100)
+        final_image = final_image.convert('RGB')
+
+        exif_info = image.info['exif']
+        final_image.save(export_path, format='JPEG', quality=100, exif=exif_info)
 
         print(f'Done {export_path}')
 
