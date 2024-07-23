@@ -6,7 +6,8 @@ PORTRAIT = (1080, 1350)  # 4 / 5
 LANDSCAPE = (1080, 566)  # 1.91 / 1
 FRAME_COLOR = (255, 255, 255)
 FRAME_PADDING = 64
-RADIUS = 32
+RADIUS = 24
+
 
 def add_corners(im, rad):
     circle = Image.new('L', (rad * 2, rad * 2), 0)
@@ -22,7 +23,8 @@ def add_corners(im, rad):
     return im
 
 
-def visit(image_path: str):
+# Places the image into a white background together with padding
+def change_with_frame(image_path: str):
     name, extension = os.path.splitext(os.path.basename(image_path))
     export_path = os.path.join('export', f'{name}.jpg')
 
@@ -60,7 +62,59 @@ def visit(image_path: str):
         print(f'Done {export_path}')
 
 
-def change_recursive(root: str):
+# Resize and crop the photo specific to instagram format
+def change_full(image_path: str):
+    name, extension = os.path.splitext(os.path.basename(image_path))
+    export_path = os.path.join('export', f'{name}.jpg')
+    export_path_square = os.path.join('export', f'{name}_sq.jpg')
+
+    with Image.open(image_path) as image:
+
+        img_aspect = image.width / image.height
+        make_square = False
+
+        if image.width < image.height:
+            size = PORTRAIT
+            target_aspect = PORTRAIT[0] / PORTRAIT[1]
+
+        if image.width > image.height:
+            size = LANDSCAPE
+            target_aspect = LANDSCAPE[0] / LANDSCAPE[1]
+            make_square = True
+
+        if image.width == image.height:
+            size = SQUARE
+            target_aspect = 1
+
+        if target_aspect > img_aspect:
+            new_height = int(size[0] / img_aspect)
+            img = image.resize((size[0], new_height))
+
+            top = (new_height - size[1]) // 2
+            img = img.crop((0, top, size[0], top + size[1]))
+        else:
+            new_width = int(size[1] * img_aspect)
+            img = image.resize((new_width, size[1]))
+
+            left = (new_width - size[0]) // 2
+            img = img.crop((left, 0, left + size[0], size[1]))
+
+        exif_info = image.info['exif']
+        img.save(export_path, format='JPEG', quality=100, exif=exif_info)
+
+        if make_square:
+            top = (image.width - image.height) // 2
+            squared_image = image.crop((top, 0, top + image.height, image.height))
+
+            squared_image = squared_image.resize(SQUARE)
+
+            exif_info = image.info['exif']
+            squared_image.save(export_path_square, format='JPEG', quality=100, exif=exif_info)
+
+        print(f'Done {export_path}')
+
+
+def change_recursive(root: str, visit):
     dir_list = os.listdir(root)
 
     for d in dir_list:
@@ -74,7 +128,7 @@ def change_recursive(root: str):
 
 
 def main():
-    change_recursive('data')
+    change_recursive('data', change_full)
 
 
 if __name__ == '__main__':
