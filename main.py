@@ -61,6 +61,56 @@ def change_with_frame(image_path: str):
 
         print(f'Done {export_path}')
 
+RATIO = (13, 18)
+
+FACTOR = 300
+RESOLUTION_PORTRAIT = (RATIO[0] * FACTOR, RATIO[1] * FACTOR)
+RESOLUTION_LANDSCAPE = (RESOLUTION_PORTRAIT[1], RESOLUTION_PORTRAIT[0])
+PADDING = int(min(RESOLUTION_PORTRAIT[0], RESOLUTION_PORTRAIT[1]) * 0.05)
+
+def change_with_padding(image_path: str):
+    name, extension = os.path.splitext(os.path.basename(image_path))
+    export_path = os.path.join('export', f'{name}.jpg')
+
+    image_portrait_res = (RESOLUTION_PORTRAIT[0] - PADDING * 2, RESOLUTION_PORTRAIT[1] - PADDING * 2)
+    image_landscape_res = (RESOLUTION_LANDSCAPE[0] - PADDING * 2, RESOLUTION_LANDSCAPE[1] - PADDING * 2)
+
+    with Image.open(image_path) as image:
+
+        if image.width <= image.height:
+            final_image = Image.new('RGBA', RESOLUTION_PORTRAIT, FRAME_COLOR)
+            ratio = RESOLUTION_PORTRAIT[0] / RESOLUTION_PORTRAIT[1]
+            crop_w = image.width
+            crop_h = crop_w * (1 / ratio)
+
+            resize = image_portrait_res
+        else:
+            final_image = Image.new('RGBA', RESOLUTION_LANDSCAPE, FRAME_COLOR)
+            ratio = RESOLUTION_LANDSCAPE[0] / RESOLUTION_LANDSCAPE[1]
+            crop_w = image.width
+            crop_h = crop_w * (1 / ratio)
+
+            resize = image_landscape_res
+
+        if crop_h > image.height:
+            crop_h = image.height
+            crop_w = crop_h * ratio
+
+        p_crop = ((image.width - crop_w) // 2, (image.height - crop_h) // 2)
+
+        image = image.convert('RGBA')
+        image = image.crop((p_crop[0], p_crop[1], crop_w + p_crop[0], crop_h + p_crop[1]))
+        image = image.resize(resize)
+
+        position = (- (image.width - final_image.width) // 2, - (image.height - final_image.height) // 2)
+
+        final_image.paste(image, position, mask=image)
+        final_image = final_image.convert(mode='RGB')
+        exif_info = image.info['exif']
+
+        final_image.save(export_path, format='JPEG', quality=100, exif=exif_info)
+
+        print(f'Done {export_path}')
 
 # Resize and crop the photo specific to instagram format
 def change_full(image_path: str):
@@ -128,7 +178,7 @@ def change_recursive(root: str, visit):
 
 
 def main():
-    change_recursive('data', change_full)
+    change_recursive('data', change_with_padding)
 
 
 if __name__ == '__main__':
